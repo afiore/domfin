@@ -1,0 +1,14 @@
+version: '3.9'
+services:
+  metabase:
+    image: metabase/metabase:latest
+    container_name: metabase
+    hostname: metabase
+    #environment:
+    #      MB_DB_CONNECTION_URI: "jdbc:sqlite:/home/a.fiore/.domfin.sqlite"
+    volumes:
+      - /dev/urandom:/dev/random:ro
+      - /home/a.fiore/:/var/data
+      - /home/a.fiore/.domfin.sqlite:/var/data/.domfin.sqlite
+    ports:
+      - 3000:3000
