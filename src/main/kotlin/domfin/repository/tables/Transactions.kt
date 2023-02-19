@@ -20,4 +20,10 @@ object Transactions : Table("transactions") {
     val internalTransactionId = text("internal_transaction_id").nullable()
 
     override val primaryKey = PrimaryKey(accountId, transactionId)
+
+    val CreditType = "credit"
+    val DebitType = "debit"
+
+    val BookedStatus = "booked"
+    val PendingStatus = "pending"
 }
