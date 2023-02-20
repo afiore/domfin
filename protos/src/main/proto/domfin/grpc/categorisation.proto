@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package domfin.grpc;
+
+message Category {
+  string id = 1;
+  string label = 2;
+}
+
+message CategorisationRule {
+  string category_id = 1;
+  repeated string substrings = 2;
+}
+
+message GetAllCategorisationRulesRequest {}
+
+message GetAllCategorisationRulesResponse {
+  repeated CategorisationRule rules = 1;
+}
+
+message SetCategorisationRuleResponse {}
+
+service Categorisation {
+  rpc GetAllCategorisationRules(GetAllCategorisationRulesRequest) returns (GetAllCategorisationRulesResponse) {}
+  rpc SetCategorisationRule(CategorisationRule) returns (SetCategorisationRuleResponse) {}
+}
