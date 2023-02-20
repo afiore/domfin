@@ -1,10 +1,8 @@
 plugins {
-    kotlin("jvm")
+    id("kotlin-project-conventions")
     kotlin("plugin.serialization") version "1.8.0"
-    id("org.jlleitschuh.gradle.ktlint") version "11.1.0"
     application
 }
-
 
 val exposedVersion: String by project
 
@@ -34,15 +32,6 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
 
-    testImplementation(kotlin("test"))
-}
-
-tasks.test {
-    useJUnitPlatform()
-}
-
-kotlin {
-    jvmToolchain(15)
 }
 
 application {

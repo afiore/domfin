@@ -1,6 +1,7 @@
 package domfin.repository
 
 import domfin.domain.CategorisationRule
+import domfin.domain.Category
 import domfin.domain.CategoryId
 import domfin.nordigen.Credit
 import domfin.nordigen.Debit
@@ -32,11 +33,11 @@ class SqliteRepositoryTest {
             assertEquals(
                 listOf(
                     CategorisationRule(
-                        CategoryId("SOME_CATEGORY"),
+                        Category(CategoryId("SOME_CATEGORY"), "Some category"),
                         setOf("PREFIX_1", "PREFIX_2")
                     ),
                     CategorisationRule(
-                        CategoryId("SOME_OTHER_CATEGORY"),
+                        Category(CategoryId("SOME_OTHER_CATEGORY"), "Some other category"),
                         setOf("PREFIX_3")
                     ),
                 ),
@@ -69,7 +70,7 @@ class SqliteRepositoryTest {
             )
 
             with(SqliteRepository) {
-                val rule = getAllCategorisationRules().find { it.categoryId == categoryId }!!
+                val rule = getAllCategorisationRules().find { it.category.id == categoryId }!!
                 insertAllTransactions(accountId, transactions, isBooked = true)
                 categoriseTransactions(rule)
 
@@ -117,7 +118,7 @@ class SqliteRepositoryTest {
         val insertCategories =
             """INSERT INTO categories (id, label) VALUES
                          ('SOME_CATEGORY', 'Some category'),
-                         ('SOME_OTHER_CATEGORY', 'Some other...')""".trimIndent()
+                         ('SOME_OTHER_CATEGORY', 'Some other category')""".trimIndent()
         val insertCategorisationRules =
             """INSERT INTO categorisation_rules (category_id, substring) VALUES
                          ('SOME_CATEGORY', 'PREFIX_1'),

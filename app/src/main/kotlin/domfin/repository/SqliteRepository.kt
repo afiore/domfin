@@ -1,15 +1,13 @@
 package domfin.repository
 
 import domfin.domain.CategorisationRule
+import domfin.domain.Category
 import domfin.domain.CategoryId
 import domfin.domain.TransactionOffset
 import domfin.nordigen.Credit
 import domfin.nordigen.Debit
 import domfin.nordigen.Transaction
-import domfin.repository.tables.CategorisationRules
-import domfin.repository.tables.TransactionCategories
-import domfin.repository.tables.TransactionOffsets
-import domfin.repository.tables.Transactions
+import domfin.repository.tables.*
 import domfin.serde.LocalDateSerializer
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -19,6 +17,7 @@ import java.time.format.DateTimeFormatter
 object SqliteRepository : TransactionRepository, TransactionOffsetRepository, CategorisationRuleRepository,
     TransactionCategoryRepository {
     private val T = Transactions
+    private val C = Categories
     private val TO = TransactionOffsets
     private val TC = TransactionCategories
     private val CR = CategorisationRules
@@ -26,18 +25,19 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
 
     //TODO: please unit test this query!
     override fun categoriseTransactions(rule: CategorisationRule) {
+        val categoryId = rule.category.id.value
         TC.insert(
             T.slice(
                 T.accountId,
                 T.transactionId,
-                stringParam(rule.categoryId.value)
+                stringParam(categoryId)
             ).select {
                 val creditorNameMatchesRule = rule.substrings.fold(booleanParam(false)) { expression, substring ->
                     expression or (T.creditorName like "$substring%")
                 }
                 (T.transactionId notInSubQuery (TC.slice(TC.transactionId)
                     .select(
-                        TC.categoryId eq rule.categoryId.value
+                        TC.categoryId eq categoryId
                     ))).and(
                     (T.type eq stringParam(T.DebitType))
                         .and(T.status eq stringParam(T.BookedStatus))
@@ -47,11 +47,20 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
     }
 
     override fun getAllCategorisationRules(): List<CategorisationRule> =
-        CR.selectAll().map {
-            Pair(it[CR.categoryId], it[CR.substring])
+        CR.join(C, JoinType.INNER, onColumn = CR.categoryId, otherColumn = C.id).selectAll().map {
+            Triple(it[CR.categoryId], it[C.label], it[CR.substring])
         }.groupBy {
             it.first
-        }.map { CategorisationRule(CategoryId(it.key), it.value.map { it.second }.toSet()) }
+        }.map {
+            val id = CategoryId(it.key)
+            val label = it.value.map { it.second }.first()
+            val substrings = it.value.map { it.third }.toSet()
+
+            CategorisationRule(
+                Category(id, label),
+                substrings
+            )
+        }
 
     override fun setLastOffset(accountId: String, transactionOffset: TransactionOffset) {
         TO.deleteWhere { TO.accountId eq accountId }

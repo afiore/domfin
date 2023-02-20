@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package domfin.grpc;
+package domfin.sdk;
 
 message Category {
   string id = 1;
@@ -8,6 +8,11 @@ message Category {
 }
 
 message CategorisationRule {
+  Category category = 1;
+  repeated string substrings = 2;
+}
+
+message SetCategorisationRuleRequest {
   string category_id = 1;
   repeated string substrings = 2;
 }
@@ -19,8 +24,3 @@ message GetAllCategorisationRulesResponse {
 }
 
 message SetCategorisationRuleResponse {}
-
-service Categorisation {
-  rpc GetAllCategorisationRules(GetAllCategorisationRulesRequest) returns (GetAllCategorisationRulesResponse) {}
-  rpc SetCategorisationRule(CategorisationRule) returns (SetCategorisationRuleResponse) {}
-}

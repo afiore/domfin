@@ -1,3 +1,3 @@
 package domfin.domain
 
-data class CategorisationRule(val categoryId: CategoryId, val substrings: Set<String>)
+data class CategorisationRule(val category: Category, val substrings: Set<String>)
