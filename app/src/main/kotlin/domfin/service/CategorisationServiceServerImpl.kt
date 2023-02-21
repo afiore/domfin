@@ -24,7 +24,6 @@ class CategorisationServiceServerImpl<T> constructor(
     private val logger = KotlinLogging.logger {}
     override suspend fun GetAllCategorisationRules(request: GetAllCategorisationRulesRequest): GetAllCategorisationRulesResponse {
         val rules = withDb {
-            logger.info { "Fetching from repo..." }
             repo.getAllCategorisationRules().map {
                 CategorisationRule(Category(it.category.id.value, it.category.label), it.substrings.toList())
             }
