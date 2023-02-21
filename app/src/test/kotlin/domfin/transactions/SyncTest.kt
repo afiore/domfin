@@ -7,7 +7,7 @@ import domfin.nordigen.client.GetTransactionsApi
 import domfin.repository.SQLDataSource
 import domfin.repository.TransactionOffsetRepository
 import domfin.repository.TransactionRepository
-import domfin.repository.tmpFile
+import domfin.repository.mem
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
@@ -111,7 +111,7 @@ class SyncTest {
 
         val repo = StubRepo()
 
-        val sync = Sync(api, repo, SQLDataSource.tmpFile())
+        val sync = Sync(api, repo, SQLDataSource.mem())
 
         runBlocking {
             sync.runForAllAccounts()
@@ -143,7 +143,7 @@ class SyncTest {
         repo.insertAllTransactions(accountId, listOf(t2, t1), isBooked = true)
         repo.setLastOffset(accountId, TransactionOffset(t2.valueDate, t2.transactionId, null))
 
-        val sync = Sync(api, repo, SQLDataSource.tmpFile())
+        val sync = Sync(api, repo, SQLDataSource.mem())
 
         runBlocking {
             sync.runForAllAccounts()

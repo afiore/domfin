@@ -1,3 +1,3 @@
 rootProject.name = "domfin"
 
-include("app", "protos")
+include("app", "sdk")

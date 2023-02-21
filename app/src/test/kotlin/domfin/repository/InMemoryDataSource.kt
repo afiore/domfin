@@ -1,5 +1,7 @@
 package domfin.repository
 
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Instant
 import java.util.*
 import javax.sql.DataSource
@@ -13,9 +15,13 @@ fun SQLDataSource.mem(): DataSource =
         sharedCache = true
     )
 
-fun SQLDataSource.tmpFile(): DataSource =
-    SQLDataSource.forJdbcUrl(
-        "jdbc:sqlite:/tmp/domfin-${
-            Instant.now().toEpochMilli()
-        }.db",
-    )
+fun <T> SQLDataSource.fromTmpFile(run: (DataSource) -> T): T {
+    val tmpDir = System.getProperty("java.io.tmpdir")
+    val dbFile = "$tmpDir/domfin-${Instant.now().toEpochMilli()}.db"
+    val datasSource = SQLDataSource.forJdbcUrl("jdbc:sqlite:$dbFile")
+    return try {
+        run(datasSource)
+    } finally {
+        Files.delete(Path.of(dbFile))
+    }
+}

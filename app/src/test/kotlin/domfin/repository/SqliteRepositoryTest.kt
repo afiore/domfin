@@ -22,6 +22,18 @@ class SqliteRepositoryTest {
     private val logger = KotlinLogging.logger("SqliteRepositoryTest")
 
     @Test
+    fun `fetches a single category`() {
+        withDb {
+            executeUpdates(Queries.insertCategories)
+            val category = SqliteRepository.getCategory(Fixtures.Category2.id)
+            assertEquals(
+                Category(CategoryId("SOME_OTHER_CATEGORY"), "Some other category"),
+                category
+            )
+        }
+    }
+
+    @Test
     fun `returns all the defined categorisation rules`() {
         withDb {
             executeUpdates(
@@ -44,6 +56,17 @@ class SqliteRepositoryTest {
                 allCategorisationRules
             )
 
+        }
+    }
+
+    @Test
+    fun `sets a categorisation rule`() {
+        val substrings = setOf("SUPERMARKET_X", "SUPERMARKET_Y", "SUPERMARKET_Z")
+        withDb {
+            executeUpdates(Queries.insertCategories)
+            SqliteRepository.setCategorisationRule(Fixtures.Category1.id, substrings)
+            val rule = SqliteRepository.getAllCategorisationRules().firstOrNull()
+            assertEquals(CategorisationRule(Fixtures.Category1, substrings), rule)
         }
     }
 
@@ -101,29 +124,37 @@ class SqliteRepositoryTest {
 
     private fun <T> withDb(stmt: Transaction.() -> T) {
         runBlocking {
-            val dataSource = SQLDataSource.tmpFile()
-            val migrator = SqlMigrator(dataSource, includeSeedData = false)
-            val db = Database.connect(dataSource)
-            TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
-            transaction(db) {
-                runBlocking {
-                    migrator()
+            SQLDataSource.fromTmpFile { dataSource ->
+                val migrator = SqlMigrator(dataSource, includeSeedData = false)
+                val db = Database.connect(dataSource)
+                TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
+                transaction(db) {
+                    runBlocking {
+                        migrator()
+                    }
+                    stmt()
                 }
-                stmt()
+
             }
+
         }
+    }
+
+    object Fixtures {
+        val Category1 = Category(CategoryId("SOME_CATEGORY"), "Some category")
+        val Category2 = Category(CategoryId("SOME_OTHER_CATEGORY"), "Some other category")
     }
 
     object Queries {
         val insertCategories =
             """INSERT INTO categories (id, label) VALUES
-                         ('SOME_CATEGORY', 'Some category'),
-                         ('SOME_OTHER_CATEGORY', 'Some other category')""".trimIndent()
+                         ('${Fixtures.Category1.id.value}', '${Fixtures.Category1.label}'),
+                         ('${Fixtures.Category2.id.value}', '${Fixtures.Category2.label}')""".trimIndent()
         val insertCategorisationRules =
             """INSERT INTO categorisation_rules (category_id, substring) VALUES
-                         ('SOME_CATEGORY', 'PREFIX_1'),
-                         ('SOME_CATEGORY', 'PREFIX_2'),
-                         ('SOME_OTHER_CATEGORY', 'PREFIX_3')""".trimIndent()
+                         ('${Fixtures.Category1.id.value}', 'PREFIX_1'),
+                         ('${Fixtures.Category1.id.value}', 'PREFIX_2'),
+                         ('${Fixtures.Category2.id.value}', 'PREFIX_3')""".trimIndent()
     }
 
 

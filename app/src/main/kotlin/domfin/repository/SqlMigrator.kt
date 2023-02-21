@@ -9,13 +9,17 @@ class SqlMigrator(private val dataSource: DataSource, includeSeedData: Boolean) 
     ))
 
     operator suspend fun invoke() {
-        val flyway = Flyway.configure()
-            .dataSource(dataSource)
-            .group(true)
-            .outOfOrder(false)
-            .locations(*locations)
-            .load()
-        flyway.migrate()
+        try {
+            val flyway = Flyway.configure()
+                .dataSource(dataSource)
+                .group(true)
+                .outOfOrder(false)
+                .locations(*locations)
+                .load()
+            flyway.migrate()
+        } finally {
+            dataSource.connection.close()
+        }
     }
 
     companion object {

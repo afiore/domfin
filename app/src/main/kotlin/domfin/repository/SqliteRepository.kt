@@ -14,7 +14,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-object SqliteRepository : TransactionRepository, TransactionOffsetRepository, CategorisationRuleRepository,
+object SqliteRepository : TransactionRepository, TransactionOffsetRepository, CategoriesRepository,
+    CategorisationRuleRepository,
     TransactionCategoryRepository {
     private val T = Transactions
     private val C = Categories
@@ -23,18 +24,18 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
     private val CR = CategorisationRules
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-    //TODO: please unit test this query!
-    override fun categoriseTransactions(rule: CategorisationRule) {
-        val categoryId = rule.category.id.value
+    override fun categoriseTransactions(categorisationRule: CategorisationRule) {
+        val categoryId = categorisationRule.category.id.value
         TC.insert(
             T.slice(
                 T.accountId,
                 T.transactionId,
                 stringParam(categoryId)
             ).select {
-                val creditorNameMatchesRule = rule.substrings.fold(booleanParam(false)) { expression, substring ->
-                    expression or (T.creditorName like "$substring%")
-                }
+                val creditorNameMatchesRule =
+                    categorisationRule.substrings.fold(booleanParam(false)) { expression, substring ->
+                        expression or (T.creditorName like "$substring%")
+                    }
                 (T.transactionId notInSubQuery (TC.slice(TC.transactionId)
                     .select(
                         TC.categoryId eq categoryId
@@ -44,6 +45,20 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
                         .and(creditorNameMatchesRule)
                 )
             })
+    }
+
+
+    override fun getCategory(id: CategoryId): Category? =
+        C.select { C.id eq id.value }.map {
+            Category(CategoryId(it[C.id]), it[C.label])
+        }.firstOrNull()
+
+    override fun setCategorisationRule(categoryId: CategoryId, substrings: Set<String>) {
+        CR.deleteWhere { CR.categoryId eq categoryId.value }
+        CR.batchInsert(substrings) { substring ->
+            this[CR.categoryId] = categoryId.value
+            this[CR.substring] = substring
+        }
     }
 
     override fun getAllCategorisationRules(): List<CategorisationRule> =

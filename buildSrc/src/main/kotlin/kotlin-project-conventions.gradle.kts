@@ -2,8 +2,8 @@ plugins {
     id("org.jetbrains.kotlin.jvm")
 }
 
-kotlin {
-    jvmToolchain(15)
+repositories {
+    mavenCentral()
 }
 
 dependencies {
