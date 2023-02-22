@@ -11,16 +11,13 @@ dependencies {
 
 
     implementation(libs.kotlinx.coroutines)
-
     implementation(libs.bundles.logging)
-    // DB
+
     implementation(platform(libs.exposed.bom))
     implementation(libs.bundles.db)
 
-    // gRPC
     implementation(platform(libs.wire.bom))
     implementation(libs.wire.grpc.server)
-
     implementation(platform(libs.grpc.bom))
     implementation(libs.bundles.grpc.server)
 }
