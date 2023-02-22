@@ -1,8 +1,7 @@
 plugins {
-    kotlin("jvm")
     id("application")
-    //TODO: can we avoid duplicating BOM version?
-    id("com.squareup.wire").version("4.5.1")
+    id("kotlin-project-conventions")
+    alias(libs.plugins.wire)
 }
 
 repositories {

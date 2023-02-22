@@ -1,0 +1,52 @@
+[versions]
+kotlin = "1.8.0"
+http4k = "4.37.0.0"
+exposed = "0.40.1"
+wire = "4.5.1"
+grpc = "1.53.0"
+
+[libraries]
+kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.6.4" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.5.0-RC" }
+
+kotlin-logging = { module = "io.github.microutils:kotlin-logging-jvm", version = "3.0.4" }
+slf4j-reload4j = { module = "org.slf4j:slf4j-reload4j", version = "2.0.6" }
+
+http4k-bom = { module = "org.http4k:http4k-bom", version.ref = "http4k" }
+http4k-core = { module = "org.http4k:http4k-core" }
+http4k-client-apache = { module = "org.http4k:http4k-client-apache" }
+http4k-format-kotlinx-serialization = { module = "org.http4k:http4k-format-kotlinx-serialization" }
+
+clikt = { module = "com.github.ajalt.clikt:clikt", version = "3.5.0" }
+
+flyway-core = { module = "org.flywaydb:flyway-core", version = "9.14.1" }
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version = "3.40.1.0" }
+
+exposed-bom = { module = "org.jetbrains.exposed:exposed-bom", version.ref = "exposed" }
+exposed-core = { module = "org.jetbrains.exposed:exposed-core" }
+exposed-dao = { module = "org.jetbrains.exposed:exposed-dao" }
+exposed-jdbc = { module = "org.jetbrains.exposed:exposed-jdbc" }
+
+wire-bom = { module = "com.squareup.wire:wire-bom", version.ref = "wire" }
+wire-grpc-server = { module = "com.squareup.wire:wire-grpc-server" }
+wire-grpc-client = { module = "com.squareup.wire:wire-grpc-client" }
+wire-runtime = { module = "com.squareup.wire:wire-runtime" }
+
+grpc-bom = { module = "io.grpc:grpc-bom", version.ref = "grpc" }
+grpc-services = { module = "io.grpc:grpc-services" }
+grpc-core = { module = "io.grpc:grpc-core" }
+grpc-netty = { module = "io.grpc:grpc-netty" }
+grpc-protobuf = { module = "io.grpc:grpc-protobuf" }
+grpc-kotlin-stub = { module = "io.grpc:grpc-kotlin-stub", version = "1.3.0" }
+
+
+[bundles]
+logging = ["kotlin-logging", "slf4j-reload4j"]
+http4k = ["http4k-core", "http4k-client-apache", "http4k-format-kotlinx-serialization"]
+db = ["flyway-core", "sqlite-jdbc", "exposed-core", "exposed-dao", "exposed-jdbc"]
+grpc-server = ["grpc-core", "grpc-services", "grpc-netty"]
+
+[plugins]
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+wire = { id = "com.squareup.wire", version.ref = "wire" }

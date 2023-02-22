@@ -1,4 +1,4 @@
-package domfin.service
+package domfin.grpc
 
 import domfin.domain.CategoryId
 import domfin.repository.CategoriesRepository

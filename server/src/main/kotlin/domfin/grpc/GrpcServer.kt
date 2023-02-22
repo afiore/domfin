@@ -1,4 +1,4 @@
-package domfin.service
+package domfin.grpc
 
 import domfin.repository.SQLDataSource
 import domfin.repository.SqlMigrator
