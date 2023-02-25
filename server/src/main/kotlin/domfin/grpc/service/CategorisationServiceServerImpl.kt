@@ -1,18 +1,17 @@
-package domfin.grpc
+package domfin.grpc.service
 
 import domfin.domain.CategoryId
 import domfin.repository.CategoriesRepository
 import domfin.repository.CategorisationRuleRepository
+import domfin.repository.transact
 import domfin.sdk.*
 import domfin.sdk.services.CategorisationServiceWireGrpc.CategorisationServiceImplBase
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
 import mu.KotlinLogging
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.transactions.transaction
 import javax.sql.DataSource
 
+//TODO: is there a way to fail compilation when new methods are introduced? should we care?
 class CategorisationServiceServerImpl<T> constructor(
     private val repo: T,
     private val dataSource: DataSource
@@ -22,8 +21,9 @@ class CategorisationServiceServerImpl<T> constructor(
               T : CategorisationRuleRepository {
 
     private val logger = KotlinLogging.logger {}
+
     override suspend fun GetAllCategorisationRules(request: GetAllCategorisationRulesRequest): GetAllCategorisationRulesResponse {
-        val rules = withDb {
+        val rules = dataSource.transact {
             repo.getAllCategorisationRules().map {
                 CategorisationRule(Category(it.category.id.value, it.category.label), it.substrings.toList())
             }
@@ -33,7 +33,7 @@ class CategorisationServiceServerImpl<T> constructor(
 
     override suspend fun SetCategorisationRule(request: SetCategorisationRuleRequest): SetCategorisationRuleResponse {
         val categoryId = CategoryId(request.category_id)
-        withDb {
+        dataSource.transact {
             val category = repo.getCategory(categoryId)
             if (category == null)
                 throw StatusRuntimeException(Status.NOT_FOUND)
@@ -44,10 +44,4 @@ class CategorisationServiceServerImpl<T> constructor(
         return SetCategorisationRuleResponse()
     }
 
-    private fun <T> withDb(run: Transaction.() -> T): T {
-        val db = Database.connect(dataSource)
-        return transaction(db) {
-            run()
-        }
-    }
 }

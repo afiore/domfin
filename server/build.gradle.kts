@@ -23,5 +23,5 @@ dependencies {
 }
 
 application {
-    mainClass.set("Main")
+    mainClass.set("domfin.grpc.GrpcServerKt")
 }

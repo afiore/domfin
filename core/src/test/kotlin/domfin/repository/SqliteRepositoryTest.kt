@@ -10,10 +10,8 @@ import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
-import org.jetbrains.exposed.sql.transactions.TransactionManager
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.junit.jupiter.api.Test
-import java.sql.Connection
 import java.time.LocalDate
 import kotlin.test.assertEquals
 
@@ -126,12 +124,9 @@ class SqliteRepositoryTest {
         runBlocking {
             SQLDataSource.fromTmpFile { dataSource ->
                 val migrator = SqlMigrator(dataSource, includeSeedData = false)
+                runBlocking { migrator() }
                 val db = Database.connect(dataSource)
-                TransactionManager.manager.defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE
                 transaction(db) {
-                    runBlocking {
-                        migrator()
-                    }
                     stmt()
                 }
 
