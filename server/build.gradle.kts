@@ -23,5 +23,8 @@ dependencies {
 }
 
 application {
+    applicationDefaultJvmArgs = listOf(
+        "-Dkotlinx.coroutines.debug"
+    )
     mainClass.set("domfin.grpc.GrpcServerKt")
 }
