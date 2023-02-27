@@ -1,9 +1,6 @@
 package domfin.repository
 
-import domfin.domain.CategorisationRule
-import domfin.domain.Category
-import domfin.domain.CategoryId
-import domfin.domain.TransactionOffset
+import domfin.domain.*
 import domfin.nordigen.Credit
 import domfin.nordigen.Debit
 import domfin.nordigen.Transaction
@@ -11,6 +8,7 @@ import domfin.repository.tables.*
 import domfin.serde.LocalDateSerializer
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -23,6 +21,57 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
     private val TC = TransactionCategories
     private val CR = CategorisationRules
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+
+    override fun getCategorisedExpenses(accountIds: Set<AccountId>, categoryIds: Set<CategoryId>): List<Expense> {
+        fun inNelOrTrue(column: Column<String>, values: Iterable<String>) =
+            if (values.count() == 0)
+                booleanParam(true)
+            else
+                column inList values
+
+        return T.join(TC, JoinType.LEFT, onColumn = TC.transactionId, otherColumn = T.transactionId)
+            .join(C, JoinType.LEFT, onColumn = TC.categoryId, otherColumn = C.id)
+            .slice(
+                T.accountId,
+                T.transactionId,
+                T.valueDate,
+                T.amount,
+                T.currency,
+                T.creditorName,
+                TC.categoryId,
+                C.label
+            )
+            .select(
+                inNelOrTrue(T.accountId, accountIds)
+                    .and(
+                        inNelOrTrue(TC.categoryId, categoryIds.map { it.value })
+                    )
+                    .and(T.status eq T.BookedStatus)
+                    .and(T.type eq T.DebitType)
+            )
+            .orderBy(
+                Pair(T.valueDate, SortOrder.DESC),
+                Pair(T.accountId, SortOrder.ASC),
+                Pair(T.transactionId, SortOrder.ASC),
+            )
+            .limit(500, offset = 0)
+            .map {
+                val number = (it[T.amount] / 100).toDouble()
+                val amount = Amount(number, it[T.currency])
+                val category = it[TC.categoryId]?.let { id ->
+                    Category(CategoryId(id), it[C.label])
+                }
+                Expense(
+                    it[T.accountId],
+                    it[T.transactionId],
+                    LocalDate.parse(it[T.valueDate]),
+                    amount,
+                    it[T.creditorName]!!,
+                    category
+                )
+            }
+    }
+
 
     override fun categoriseTransactions(categorisationRule: CategorisationRule) {
         val categoryId = categorisationRule.category.id.value
@@ -77,7 +126,7 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
             )
         }
 
-    override fun setLastOffset(accountId: String, transactionOffset: TransactionOffset) {
+    override fun setLastOffset(accountId: AccountId, transactionOffset: TransactionOffset) {
         TO.deleteWhere { TO.accountId eq accountId }
         TO.insert {
             it[TO.accountId] = accountId
@@ -87,7 +136,7 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
         }
     }
 
-    override fun getLastOffset(accountId: String): TransactionOffset? =
+    override fun getLastOffset(accountId: AccountId): TransactionOffset? =
         TO.slice(TO.lastDate, TO.lastBookedTransactionId, TO.lastPendingTransactionId)
             .select { TO.accountId eq accountId }
             .map {
@@ -98,14 +147,14 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
                 )
             }.singleOrNull()
 
-    override fun insertAllTransactions(accountId: String, transactions: Iterable<Transaction>, isBooked: Boolean) {
+    override fun insertAllTransactions(accountId: AccountId, transactions: Iterable<Transaction>, isBooked: Boolean) {
         T.batchInsert(transactions, shouldReturnGeneratedValues = false) { t ->
             this[T.accountId] = accountId
             this[T.transactionId] = t.transactionId
             this[T.status] = if (isBooked) "booked" else "pending"
             this[T.bookingDate] = t.bookingDate.format(LocalDateSerializer.format)
             this[T.valueDate] = t.valueDate.format(LocalDateSerializer.format)
-            this[T.amount] = (t.transactionAmount.amount * 100).toInt()
+            this[T.amount] = (t.transactionAmount.amount * 100).toLong()
             this[T.currency] = t.transactionAmount.currency
             this[T.remittanceInformation] = t.remittanceInformationUnstructured
             this[T.bankTransactionCode] = t.bankTransactionCode

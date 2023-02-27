@@ -1,13 +1,12 @@
 package domfin.transactions
 
+import domfin.domain.CategoryId
+import domfin.domain.Expense
 import domfin.domain.TransactionOffset
 import domfin.nordigen.*
 import domfin.nordigen.client.GetAllRequistions
 import domfin.nordigen.client.GetTransactionsApi
-import domfin.repository.SQLDataSource
-import domfin.repository.TransactionOffsetRepository
-import domfin.repository.TransactionRepository
-import domfin.repository.mem
+import domfin.repository.*
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
 import java.time.LocalDate
@@ -41,8 +40,16 @@ class SyncTest {
         private val pending: MutableMap<String, List<Transaction>> = mutableMapOf()
         private val offsets: MutableMap<String, TransactionOffset> = mutableMapOf()
 
+
         fun getBookedTransactions(accountId: String): List<Transaction> =
             booked[accountId].orEmpty()
+
+        override fun getCategorisedExpenses(
+            accountIds: Set<AccountId>,
+            categoryIds: Set<CategoryId>
+        ): List<Expense> {
+            TODO("Not yet implemented")
+        }
 
         override fun setLastOffset(accountId: String, transactionOffset: TransactionOffset) {
             offsets[accountId] = transactionOffset

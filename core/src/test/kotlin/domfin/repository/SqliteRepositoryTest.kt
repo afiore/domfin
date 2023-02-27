@@ -1,8 +1,6 @@
 package domfin.repository
 
-import domfin.domain.CategorisationRule
-import domfin.domain.Category
-import domfin.domain.CategoryId
+import domfin.domain.*
 import domfin.nordigen.Credit
 import domfin.nordigen.Debit
 import domfin.nordigen.TransactionAmount
@@ -18,6 +16,10 @@ import kotlin.test.assertEquals
 class SqliteRepositoryTest {
 
     private val logger = KotlinLogging.logger("SqliteRepositoryTest")
+
+    val accountId = "account-x"
+    val otherAccountId = "account-y"
+
 
     @Test
     fun `fetches a single category`() {
@@ -71,7 +73,6 @@ class SqliteRepositoryTest {
 
     @Test
     fun `categorises transactions according to the defined rules`() {
-        val accountId = "account-x"
         val transactions = listOf(
             debitTransaction("t1", "PREFIX_2_SHOP"),
             debitTransaction("t2", "OTHER"),
@@ -108,7 +109,100 @@ class SqliteRepositoryTest {
 
             }
         }
+    }
 
+    @Test
+    fun `fetches categorised expenses`() {
+        withDb {
+            executeUpdates(Queries.insertCategories)
+
+            with(SqliteRepository) {
+                val debitTransactions = listOf(
+                    debitTransaction("t4", "PASTA LAND", LocalDate.now().minusDays(5)),
+                    debitTransaction("t2", "PASTA LAND", LocalDate.now().minusDays(4)),
+                    debitTransaction("t3", "METRO TICKET", LocalDate.now().minusDays(4)),
+                    debitTransaction("t1", "NOODLES TEMPLE"),
+                )
+                val otherDebitTransactions = listOf(
+                    debitTransaction("t5", "BOOKS & COFFEE"),
+                )
+
+                insertAllTransactions(accountId, debitTransactions, isBooked = true)
+                insertAllTransactions(otherAccountId, otherDebitTransactions, isBooked = true)
+
+                executeUpdates(
+                    """
+                    INSERT INTO transaction_categories (account_id, transaction_id, category_id) VALUES 
+                    ('$accountId', 't1', '${Fixtures.Category1.id.value}'),
+                    ('$accountId', 't2', '${Fixtures.Category1.id.value}'),
+                    ('$accountId', 't3', '${Fixtures.Category2.id.value}')
+                """.trimIndent()
+                )
+
+                val expectedAmount = Amount(15.0, "EUR")
+
+                val allExpenses = getCategorisedExpenses()
+
+                assertEquals(
+                    listOf(
+                        Expense(accountId, "t1", LocalDate.now(), expectedAmount, "NOODLES TEMPLE", Fixtures.Category1),
+                        Expense(otherAccountId, "t5", LocalDate.now(), expectedAmount, "BOOKS & COFFEE", null),
+                        Expense(
+                            accountId,
+                            "t2",
+                            LocalDate.now().minusDays(4),
+                            expectedAmount,
+                            "PASTA LAND",
+                            Fixtures.Category1
+                        ),
+                        Expense(
+                            accountId,
+                            "t3",
+                            LocalDate.now().minusDays(4),
+                            expectedAmount,
+                            "METRO TICKET",
+                            Fixtures.Category2
+                        ),
+                        Expense(
+                            accountId,
+                            "t4",
+                            LocalDate.now().minusDays(5),
+                            expectedAmount,
+                            "PASTA LAND",
+                            null
+                        )
+                    ),
+                    allExpenses
+                )
+
+                //filter by accountIds
+
+                val expensesInOtherAccount = getCategorisedExpenses(accountIds = setOf(otherAccountId))
+                assertEquals(
+                    listOf(
+                        Expense(otherAccountId, "t5", LocalDate.now(), expectedAmount, "BOOKS & COFFEE", null),
+                    ), expensesInOtherAccount
+                )
+
+                //filter by account ids and categories
+                val categorisedExpenses = getCategorisedExpenses(
+                    accountIds = setOf(accountId),
+                    categoryIds = setOf(Fixtures.Category2.id)
+                )
+                assertEquals(
+                    listOf(
+                        Expense(
+                            accountId,
+                            "t3",
+                            LocalDate.now().minusDays(4),
+                            expectedAmount,
+                            "METRO TICKET",
+                            Fixtures.Category2
+                        ),
+                    ), categorisedExpenses
+                )
+            }
+        }
     }
 
 
@@ -156,6 +250,10 @@ class SqliteRepositoryTest {
     private fun creditTransaction(id: String): domfin.nordigen.Transaction =
         Credit(id, "some-debitor", null, TransactionAmount("USD", 2000.0), "", LocalDate.now(), LocalDate.now())
 
-    private fun debitTransaction(id: String, creditorName: String): domfin.nordigen.Transaction =
-        Debit(id, creditorName, TransactionAmount("EUR", 15.0), "", LocalDate.now(), LocalDate.now())
+    private fun debitTransaction(
+        id: String,
+        creditorName: String,
+        date: LocalDate = LocalDate.now()
+    ): domfin.nordigen.Transaction =
+        Debit(id, creditorName, TransactionAmount("EUR", 15.0), "", date, date)
 }
