@@ -6,6 +6,7 @@ val libs = the<LibrariesForLibs>()
 plugins {
     id("org.jetbrains.kotlin.jvm")
     id("com.adarshr.test-logger")
+    id("io.gitlab.arturbosch.detekt")
 }
 
 repositories {

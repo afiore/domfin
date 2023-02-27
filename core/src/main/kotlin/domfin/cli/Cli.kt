@@ -14,7 +14,7 @@ class Cli : CliktCommand() {
 
     val nordigenSecretKey by option(
         envvar = "NORDIGEN_SECRET_KEY",
-        help = "The Nordigen secret key. Will be automatically read from the NORDIGEN_SECRET_KEY env variable if present."
+        help = "The Nordigen secret key. Will use NORDIGEN_SECRET_KEY env variable if set."
     ).prompt(requireConfirmation = true, hideInput = true)
 
 

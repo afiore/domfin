@@ -5,7 +5,6 @@ import domfin.nordigen.Credit
 import domfin.nordigen.Debit
 import domfin.nordigen.TransactionAmount
 import kotlinx.coroutines.runBlocking
-import mu.KotlinLogging
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -14,12 +13,8 @@ import java.time.LocalDate
 import kotlin.test.assertEquals
 
 class SqliteRepositoryTest {
-
-    private val logger = KotlinLogging.logger("SqliteRepositoryTest")
-
     val accountId = "account-x"
     val otherAccountId = "account-y"
-
 
     @Test
     fun `fetches a single category`() {
@@ -140,9 +135,9 @@ class SqliteRepositoryTest {
                 )
 
                 val expectedAmount = Amount(15.0, "EUR")
+                // No filters supplied
 
                 val allExpenses = getCategorisedExpenses()
-
                 assertEquals(
                     listOf(
                         Expense(accountId, "t1", LocalDate.now(), expectedAmount, "NOODLES TEMPLE", Fixtures.Category1),
@@ -174,6 +169,14 @@ class SqliteRepositoryTest {
                     ),
                     allExpenses
                 )
+
+                // offset/limit
+                assertEquals(
+                    listOf("t1", "t5", "t2"),
+                    getCategorisedExpenses(limitAndOffset = LimitAndOffset(3, 0)).map { it.transactionId })
+                assertEquals(
+                    listOf("t3", "t4"),
+                    getCategorisedExpenses(limitAndOffset = LimitAndOffset(3, 3)).map { it.transactionId })
 
                 //filter by accountIds
 

@@ -8,13 +8,16 @@ class SqlMigrator(private val dataSource: DataSource, includeSeedData: Boolean) 
         MigrationsResourceDir
     ))
 
-    operator suspend fun invoke() {
+    operator fun invoke() {
         try {
+            @SuppressWarnings("SpreadOperator")
             val flyway = Flyway.configure()
                 .dataSource(dataSource)
                 .group(true)
                 .outOfOrder(false)
-                .locations(*locations)
+                .locations(
+                    *locations
+                )
                 .load()
             flyway.migrate()
         } finally {
@@ -23,7 +26,7 @@ class SqlMigrator(private val dataSource: DataSource, includeSeedData: Boolean) 
     }
 
     companion object {
-        private val MigrationsResourceDir = "classpath:/db/migration"
-        private val SeedDataResourceDir = "classpath:/db/seed"
+        private const val MigrationsResourceDir = "classpath:/db/migration"
+        private const val SeedDataResourceDir = "classpath:/db/seed"
     }
 }

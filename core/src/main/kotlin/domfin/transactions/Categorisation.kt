@@ -15,7 +15,7 @@ class Categorisation<Repo> constructor(
 
     private val logger = KotlinLogging.logger {}
 
-    suspend fun applyAllRules() {
+    fun applyAllRules() {
         //TODO: avoid a separate connection per class
         val db = Database.connect(dataSource)
         transaction(db) {

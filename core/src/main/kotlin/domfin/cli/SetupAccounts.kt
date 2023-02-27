@@ -29,9 +29,10 @@ class SetupAccounts : CliktCommand() {
                 echo("No institutions found for this country code")
                 exitProcess(0)
             } else {
-                //TODO: format as a table and include BIC
                 institutions.withIndex()
-                    .forEach { println("${it.index + 1}. ${it.value.name}, transaction total days #${it.value.transactionTotalDays}") }
+                    .forEach {
+                        println("${it.index + 1}. ${it.value.name} transaction total days #${it.value.transactionTotalDays}")
+                    }
 
                 val institutionId = promptForBankChoice(institutions)
                 val requisition = api.createRequisition(RequisitionRequest("http://example.com/", institutionId))
@@ -44,7 +45,7 @@ class SetupAccounts : CliktCommand() {
     }
 
     private fun pleaseConfirm(msg: String) {
-        echo("$msg")
+        echo(msg)
 
         if (setOf("yes", "y").contains(readTrimLn()))
             return
@@ -57,17 +58,21 @@ class SetupAccounts : CliktCommand() {
 
         val idx = readln().trim().toIntOrNull()
 
-        if (idx != null && institutions.indices.contains(idx - 1)) {
+        val institutionId = if (idx != null && institutions.indices.contains(idx - 1)) {
             val institution = institutions.get(idx - 1)
             echo("Ok, you have picked: ${institution.name}")
             echo("Please confirm: y/n")
 
             if (setOf("y", "yes").contains(readTrimLn()))
-                return institution.id
+                institution.id
             else
-                return promptForBankChoice(institutions)
-        } else
+                null
+        } else null
+
+        if (institutionId == null)
             return promptForBankChoice(institutions)
+        else
+            return institutionId
     }
 
     private fun readTrimLn() = readln().trim()

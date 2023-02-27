@@ -16,7 +16,7 @@ class AccountInformationApiImpl internal constructor(private val client: HttpHan
     private val withAccessToken = ClientFilters.BearerAuth(accessToken)
 
     class SuccessfulStatusCodeExpected(val response: Response) : Throwable() {
-        override val message: String?
+        override val message: String
             get() = "Expected a 2xx status code, got instead ${response.status}, response payload: ${response.body}"
     }
 
@@ -82,7 +82,7 @@ class AccountInformationApiImpl internal constructor(private val client: HttpHan
         return requisitions
     }
 
-    suspend private fun getRequisitionsPage(offset: Int?): RequisitionResults {
+    private fun getRequisitionsPage(offset: Int?): RequisitionResults {
         val url = baseUri.appendToPath("/requisitions/")
         val urlWithLimit = offset?.let { url.query("offset", it.toString()) } ?: url
         val request = Request(Method.GET, urlWithLimit).withJsonHeaders()
@@ -101,7 +101,7 @@ class AccountInformationApiImpl internal constructor(private val client: HttpHan
                 response
         }
 
-        suspend fun withFreshToken(secretId: String, secretKey: String): AccountInformationApi {
+        fun withFreshToken(secretId: String, secretKey: String): AccountInformationApi {
             val request0 = Request(Method.POST, baseUri.appendToPath("/token/new/")).withJsonHeaders()
 
             val payload = SecretIdAndKey(secretId, secretKey)

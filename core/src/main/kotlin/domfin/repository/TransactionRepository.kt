@@ -9,20 +9,21 @@ typealias AccountId = String
 
 interface TransactionRepository {
 
-    fun insertAllTransactions(accountId: AccountId, transactionsByStatus: NordigenTransactionByStatus): Unit {
+    fun insertAllTransactions(accountId: AccountId, transactionsByStatus: NordigenTransactionByStatus) {
         insertAllTransactions(accountId, transactionsByStatus.booked, isBooked = true)
         insertAllTransactions(accountId, transactionsByStatus.pending, isBooked = false)
     }
 
-    abstract fun getCategorisedExpenses(
+    fun getCategorisedExpenses(
         accountIds: Set<AccountId> = setOf(),
-        categoryIds: Set<CategoryId> = setOf()
+        categoryIds: Set<CategoryId> = setOf(),
+        limitAndOffset: LimitAndOffset = LimitAndOffset.Default
     ): List<Expense>
 
 
-    abstract fun insertAllTransactions(
+    fun insertAllTransactions(
         accountId: String,
         transactions: Iterable<NordigenTransaction>,
         isBooked: Boolean
-    ): Unit
+    )
 }

@@ -22,7 +22,13 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
     private val CR = CategorisationRules
     private val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
-    override fun getCategorisedExpenses(accountIds: Set<AccountId>, categoryIds: Set<CategoryId>): List<Expense> {
+    private const val TransactionAmountMultiplier = 100
+
+    override fun getCategorisedExpenses(
+        accountIds: Set<AccountId>,
+        categoryIds: Set<CategoryId>,
+        limitAndOffset: LimitAndOffset
+    ): List<Expense> {
         fun inNelOrTrue(column: Column<String>, values: Iterable<String>) =
             if (values.count() == 0)
                 booleanParam(true)
@@ -54,11 +60,11 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
                 Pair(T.accountId, SortOrder.ASC),
                 Pair(T.transactionId, SortOrder.ASC),
             )
-            .limit(500, offset = 0)
+            .limit(limitAndOffset.limit, limitAndOffset.offset)
             .map {
-                val number = (it[T.amount] / 100).toDouble()
+                val number = (it[T.amount] / TransactionAmountMultiplier).toDouble()
                 val amount = Amount(number, it[T.currency])
-                val category = it[TC.categoryId]?.let { id ->
+                val category = it.getOrNull(TC.categoryId)?.let { id ->
                     Category(CategoryId(id), it[C.label])
                 }
                 Expense(
@@ -154,7 +160,7 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
             this[T.status] = if (isBooked) "booked" else "pending"
             this[T.bookingDate] = t.bookingDate.format(LocalDateSerializer.format)
             this[T.valueDate] = t.valueDate.format(LocalDateSerializer.format)
-            this[T.amount] = (t.transactionAmount.amount * 100).toLong()
+            this[T.amount] = (t.transactionAmount.amount * TransactionAmountMultiplier).toLong()
             this[T.currency] = t.transactionAmount.currency
             this[T.remittanceInformation] = t.remittanceInformationUnstructured
             this[T.bankTransactionCode] = t.bankTransactionCode

@@ -7,11 +7,10 @@ import domfin.repository.SqlMigrator
 import domfin.repository.SqliteRepository
 import io.grpc.ServerBuilder
 import io.grpc.protobuf.services.ProtoReflectionService
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
 import mu.KotlinLogging
+import kotlin.coroutines.CoroutineContext
+
 
 fun main() {
 
@@ -20,21 +19,30 @@ fun main() {
 
     val migrator = SqlMigrator(dbConfig.dataSource, includeSeedData = true)
 
-    runBlocking {
-        migrator.invoke()
+    suspend fun launchSyncTransactions(context: CoroutineContext = Dispatchers.IO): Job {
+        return withContext(context) {
+            launch {
+                while (true) {
+                    logger.info { "About to sink transactions ..." }
+                    val accountApi =
+                        AccountInformationApiImpl.withFreshToken(
+                            nordigenConfig.secretId.raw,
+                            nordigenConfig.secretKey.raw
+                        )
+                    val transactionSync = domfin.transactions.Sync(accountApi, SqliteRepository, dbConfig.dataSource)
+                    transactionSync.runForAllAccounts()
 
-        launch(Dispatchers.IO) {
-            while (true) {
-                logger.info { "About to sink transactions ..." }
-                val accountApi =
-                    AccountInformationApiImpl.withFreshToken(nordigenConfig.secretId.raw, nordigenConfig.secretKey.raw)
-                val transactionSync = domfin.transactions.Sync(accountApi, SqliteRepository, dbConfig.dataSource)
-                transactionSync.runForAllAccounts()
-
-                logger.info { "Sleeping for ${nordigenConfig.transactionSyncInterval}... " }
-                delay(nordigenConfig.transactionSyncInterval)
+                    logger.info { "Sleeping for ${nordigenConfig.transactionSyncInterval}... " }
+                    delay(nordigenConfig.transactionSyncInterval)
+                }
             }
         }
+    }
+
+
+    runBlocking {
+        migrator.invoke()
+        launchSyncTransactions()
 
         val server =
             ServerBuilder

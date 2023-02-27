@@ -12,7 +12,7 @@ data class DBConfig(val fileName: Path) {
 
 
     companion object : FromEnv<DBConfig> {
-        private val varName = "DB_PATH"
+        private const val varName = "DB_PATH"
         override fun fromEnv(env: Env): EnvResult<DBConfig> {
             return env
                 .getVar(varName)

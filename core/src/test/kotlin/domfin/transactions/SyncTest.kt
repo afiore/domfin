@@ -35,7 +35,7 @@ class SyncTest {
 
     }
 
-    class StubRepo() : TransactionRepository, TransactionOffsetRepository {
+    class StubRepo : TransactionRepository, TransactionOffsetRepository {
         private val booked: MutableMap<String, List<Transaction>> = mutableMapOf()
         private val pending: MutableMap<String, List<Transaction>> = mutableMapOf()
         private val offsets: MutableMap<String, TransactionOffset> = mutableMapOf()
@@ -46,7 +46,8 @@ class SyncTest {
 
         override fun getCategorisedExpenses(
             accountIds: Set<AccountId>,
-            categoryIds: Set<CategoryId>
+            categoryIds: Set<CategoryId>,
+            limitAndOffset: LimitAndOffset
         ): List<Expense> {
             TODO("Not yet implemented")
         }

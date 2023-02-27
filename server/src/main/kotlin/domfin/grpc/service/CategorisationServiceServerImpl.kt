@@ -8,7 +8,6 @@ import domfin.sdk.*
 import domfin.sdk.services.CategorisationServiceWireGrpc.CategorisationServiceImplBase
 import io.grpc.Status
 import io.grpc.StatusRuntimeException
-import mu.KotlinLogging
 import javax.sql.DataSource
 
 //TODO: is there a way to fail compilation when new methods are introduced? should we care?
@@ -19,8 +18,6 @@ class CategorisationServiceServerImpl<T> constructor(
     CategorisationServiceImplBase()
         where T : CategoriesRepository,
               T : CategorisationRuleRepository {
-
-    private val logger = KotlinLogging.logger {}
 
     override suspend fun GetAllCategorisationRules(request: GetAllCategorisationRulesRequest): GetAllCategorisationRulesResponse {
         val rules = dataSource.transact {
