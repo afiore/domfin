@@ -1,3 +1,9 @@
+ext {
+    kotlin {
+        version = libs.versions.kotlin
+    }
+}
+
 plugins {
     `kotlin-dsl`
 }

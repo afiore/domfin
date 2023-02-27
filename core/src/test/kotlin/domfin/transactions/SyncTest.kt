@@ -72,7 +72,7 @@ class SyncTest {
             val existingTxIds = persisted.map { it.transactionId }.toSet()
                 .intersect(transactions.map { it.transactionId })
             if (!existingTxIds.isEmpty())
-                throw IllegalStateException("Unique constraint violation for transaction ids: $existingTxIds")
+                error("Unique constraint violation for transaction ids: $existingTxIds")
         }
 
     }
