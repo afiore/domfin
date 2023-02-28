@@ -1,7 +1,9 @@
 package domfin.grpc
 
 import domfin.config.AppConfig
-import domfin.grpc.service.CategorisationServiceServerImpl
+import domfin.grpc.service.CategorisationServiceImpl
+import domfin.grpc.service.ExceptionInterceptor
+import domfin.grpc.service.TransactionServiceImpl
 import domfin.nordigen.client.AccountInformationApiImpl
 import domfin.repository.SqlMigrator
 import domfin.repository.SqliteRepository
@@ -19,22 +21,20 @@ fun main() {
 
     val migrator = SqlMigrator(dbConfig.dataSource, includeSeedData = true)
 
-    suspend fun launchSyncTransactions(context: CoroutineContext = Dispatchers.IO): Job {
-        return withContext(context) {
-            launch {
-                while (true) {
-                    logger.info { "About to sink transactions ..." }
-                    val accountApi =
-                        AccountInformationApiImpl.withFreshToken(
-                            nordigenConfig.secretId.raw,
-                            nordigenConfig.secretKey.raw
-                        )
-                    val transactionSync = domfin.transactions.Sync(accountApi, SqliteRepository, dbConfig.dataSource)
-                    transactionSync.runForAllAccounts()
+    suspend fun launchSyncTransactions(context: CoroutineContext = Dispatchers.IO) {
+        withContext(context) {
+            while (true) {
+                logger.info { "About to sink transactions ..." }
+                val accountApi =
+                    AccountInformationApiImpl.withFreshToken(
+                        nordigenConfig.secretId.raw,
+                        nordigenConfig.secretKey.raw
+                    )
+                val transactionSync = domfin.transactions.Sync(accountApi, SqliteRepository, dbConfig.dataSource)
+                transactionSync.runForAllAccounts()
 
-                    logger.info { "Sleeping for ${nordigenConfig.transactionSyncInterval}... " }
-                    delay(nordigenConfig.transactionSyncInterval)
-                }
+                logger.info { "Sleeping for ${nordigenConfig.transactionSyncInterval}... " }
+                delay(nordigenConfig.transactionSyncInterval)
             }
         }
     }
@@ -42,18 +42,25 @@ fun main() {
 
     runBlocking {
         migrator.invoke()
-        launchSyncTransactions()
+        launch {
+            launchSyncTransactions()
+        }
 
         val server =
             ServerBuilder
                 .forPort(grpcConfig.serverPort.toInt())
                 .addService(ProtoReflectionService.newInstance())
                 .addService(
-                    CategorisationServiceServerImpl(SqliteRepository, dbConfig.dataSource)
+                    CategorisationServiceImpl(SqliteRepository, dbConfig.dataSource)
                 )
+                .addService(
+                    TransactionServiceImpl(SqliteRepository, dbConfig.dataSource)
+                )
+                .intercept(ExceptionInterceptor())
                 .build()
 
         server.start()
+        logger.info { "Starting gRPC server on port ${grpcConfig.serverPort}" }
         server.awaitTermination()
     }
 }

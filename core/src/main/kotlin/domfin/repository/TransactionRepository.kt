@@ -17,6 +17,7 @@ interface TransactionRepository {
     fun getCategorisedExpenses(
         accountIds: Set<AccountId> = setOf(),
         categoryIds: Set<CategoryId> = setOf(),
+        categorisationFilter: CategorisationFilter = CategorisationFilter.All,
         limitAndOffset: LimitAndOffset = LimitAndOffset.Default
     ): List<Expense>
 

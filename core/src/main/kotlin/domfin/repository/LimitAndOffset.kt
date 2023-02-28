@@ -1,10 +1,25 @@
 package domfin.repository
 
-data class LimitAndOffset(val limit: Int, val offset: Long = 0) {
+data class LimitAndOffset(val limit: UInt, val offset: ULong = DefaultOffset) {
+
+    fun nextOffset(resultsInCurrentPage: UInt): ULong? =
+        if (resultsInCurrentPage < limit)
+            null
+        else
+            offset + limit
+
+
+    fun next(resultsInCurrentPage: UInt): LimitAndOffset? =
+        nextOffset(resultsInCurrentPage)?.let {
+            LimitAndOffset(limit, it)
+        }
+
     companion object {
-        const val DefaultLimit: Int = 500
-        const val DefaultOffset: Long = 0
+        private const val DefaultLimit: UInt = 500u
+        private const val DefaultOffset: ULong = 0u
+
 
         val Default: LimitAndOffset = LimitAndOffset(DefaultLimit, DefaultOffset)
     }
+
 }

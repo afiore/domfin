@@ -11,7 +11,7 @@ import io.grpc.StatusRuntimeException
 import javax.sql.DataSource
 
 //TODO: is there a way to fail compilation when new methods are introduced? should we care?
-class CategorisationServiceServerImpl<T> constructor(
+class CategorisationServiceImpl<T> constructor(
     private val repo: T,
     private val dataSource: DataSource
 ) :

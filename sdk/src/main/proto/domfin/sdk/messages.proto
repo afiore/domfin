@@ -36,16 +36,23 @@ message Amount {
 message Expense {
   string account_id = 1;
   string transaction_id = 2;
-  google.protobuf.Timestamp value_date = 3;
+  string value_date = 3;
   Amount amount = 4;
   string creditorName = 5;
   optional Category category = 6;
 }
 
+enum CategorisationFilter {
+  ALL = 0;
+  SELECTED = 1;
+  UNCATEGORISED = 2;
+}
+
 message GetCategorisedExpensesRequest {
   repeated string account_ids = 1;
   repeated string category_ids = 2;
-  optional Pagination pagination = 3;
+  CategorisationFilter categorisation_filter = 3;
+  optional Pagination pagination = 4;
 }
 
 message CategorisedExpensesResponse {

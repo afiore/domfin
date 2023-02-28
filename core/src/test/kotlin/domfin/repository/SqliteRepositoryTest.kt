@@ -137,7 +137,7 @@ class SqliteRepositoryTest {
                 val expectedAmount = Amount(15.0, "EUR")
                 // No filters supplied
 
-                val allExpenses = getCategorisedExpenses()
+                val allExpenses = getCategorisedExpenses(categorisationFilter = CategorisationFilter.All)
                 assertEquals(
                     listOf(
                         Expense(accountId, "t1", LocalDate.now(), expectedAmount, "NOODLES TEMPLE", Fixtures.Category1),
@@ -171,16 +171,23 @@ class SqliteRepositoryTest {
                 )
 
                 // offset/limit
+
+                val limitAndOffset = LimitAndOffset(3u)
+
+
                 assertEquals(
                     listOf("t1", "t5", "t2"),
-                    getCategorisedExpenses(limitAndOffset = LimitAndOffset(3, 0)).map { it.transactionId })
+                    getCategorisedExpenses(limitAndOffset = limitAndOffset).map { it.transactionId })
                 assertEquals(
                     listOf("t3", "t4"),
-                    getCategorisedExpenses(limitAndOffset = LimitAndOffset(3, 3)).map { it.transactionId })
+                    getCategorisedExpenses(limitAndOffset = limitAndOffset.next(3u)!!).map { it.transactionId })
 
                 //filter by accountIds
 
-                val expensesInOtherAccount = getCategorisedExpenses(accountIds = setOf(otherAccountId))
+                val expensesInOtherAccount = getCategorisedExpenses(
+                    accountIds = setOf(otherAccountId),
+                    categorisationFilter = CategorisationFilter.Selected
+                )
                 assertEquals(
                     listOf(
                         Expense(otherAccountId, "t5", LocalDate.now(), expectedAmount, "BOOKS & COFFEE", null),
@@ -190,7 +197,8 @@ class SqliteRepositoryTest {
                 //filter by account ids and categories
                 val categorisedExpenses = getCategorisedExpenses(
                     accountIds = setOf(accountId),
-                    categoryIds = setOf(Fixtures.Category2.id)
+                    categoryIds = setOf(Fixtures.Category2.id),
+                    categorisationFilter = CategorisationFilter.Selected
                 )
                 assertEquals(
                     listOf(
@@ -204,6 +212,25 @@ class SqliteRepositoryTest {
                         ),
                     ), categorisedExpenses
                 )
+
+                //filter uncategorised only
+                val uncategorisedExpenses = getCategorisedExpenses(
+                    accountIds = setOf(accountId),
+                    categorisationFilter = CategorisationFilter.Uncategorised
+                )
+                assertEquals(
+                    listOf(
+                        Expense(
+                            accountId,
+                            "t4",
+                            LocalDate.now().minusDays(5),
+                            expectedAmount,
+                            "PASTA LAND",
+                            null
+                        )
+                    ), uncategorisedExpenses
+                )
+
             }
         }
     }

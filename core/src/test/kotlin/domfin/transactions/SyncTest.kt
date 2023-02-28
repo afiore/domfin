@@ -47,6 +47,7 @@ class SyncTest {
         override fun getCategorisedExpenses(
             accountIds: Set<AccountId>,
             categoryIds: Set<CategoryId>,
+            categorisationFilter: CategorisationFilter,
             limitAndOffset: LimitAndOffset
         ): List<Expense> {
             TODO("Not yet implemented")

@@ -7,14 +7,12 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 object LocalDateSerializer : KSerializer<LocalDate> {
-    val format: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
     override val descriptor: SerialDescriptor = PrimitiveSerialDescriptor("LocalDate", PrimitiveKind.STRING)
 
     override fun serialize(encoder: Encoder, value: LocalDate) {
-        val result = value.format(format)
+        val result = value.format(Defaults.DateFormat)
         encoder.encodeString(result)
     }
 

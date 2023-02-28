@@ -5,10 +5,11 @@ import domfin.nordigen.Credit
 import domfin.nordigen.Debit
 import domfin.nordigen.Transaction
 import domfin.repository.tables.*
-import domfin.serde.LocalDateSerializer
+import domfin.serde.Defaults
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -27,13 +28,20 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
     override fun getCategorisedExpenses(
         accountIds: Set<AccountId>,
         categoryIds: Set<CategoryId>,
-        limitAndOffset: LimitAndOffset
+        categorisationFilter: CategorisationFilter,
+        limitAndOffset: LimitAndOffset,
     ): List<Expense> {
         fun inNelOrTrue(column: Column<String>, values: Iterable<String>) =
             if (values.count() == 0)
                 booleanParam(true)
             else
                 column inList values
+
+        val categoryIdClause = when (categorisationFilter) {
+            CategorisationFilter.All -> booleanParam(true)
+            CategorisationFilter.Selected -> inNelOrTrue(TC.categoryId, categoryIds.map { it.value })
+            CategorisationFilter.Uncategorised -> TC.categoryId.isNull()
+        }
 
         return T.join(TC, JoinType.LEFT, onColumn = TC.transactionId, otherColumn = T.transactionId)
             .join(C, JoinType.LEFT, onColumn = TC.categoryId, otherColumn = C.id)
@@ -49,9 +57,7 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
             )
             .select(
                 inNelOrTrue(T.accountId, accountIds)
-                    .and(
-                        inNelOrTrue(TC.categoryId, categoryIds.map { it.value })
-                    )
+                    .and(categoryIdClause)
                     .and(T.status eq T.BookedStatus)
                     .and(T.type eq T.DebitType)
             )
@@ -60,9 +66,9 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
                 Pair(T.accountId, SortOrder.ASC),
                 Pair(T.transactionId, SortOrder.ASC),
             )
-            .limit(limitAndOffset.limit, limitAndOffset.offset)
+            .limit(limitAndOffset.limit.toInt(), limitAndOffset.offset.toLong())
             .map {
-                val number = (it[T.amount] / TransactionAmountMultiplier).toDouble()
+                val number = (it[T.amount] / TransactionAmountMultiplier.toDouble())
                 val amount = Amount(number, it[T.currency])
                 val category = it.getOrNull(TC.categoryId)?.let { id ->
                     Category(CategoryId(id), it[C.label])
@@ -158,8 +164,8 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
             this[T.accountId] = accountId
             this[T.transactionId] = t.transactionId
             this[T.status] = if (isBooked) "booked" else "pending"
-            this[T.bookingDate] = t.bookingDate.format(LocalDateSerializer.format)
-            this[T.valueDate] = t.valueDate.format(LocalDateSerializer.format)
+            this[T.bookingDate] = t.bookingDate.format(Defaults.DateFormat)
+            this[T.valueDate] = t.valueDate.format(Defaults.DateFormat)
             this[T.amount] = (t.transactionAmount.amount * TransactionAmountMultiplier).toLong()
             this[T.currency] = t.transactionAmount.currency
             this[T.remittanceInformation] = t.remittanceInformationUnstructured
