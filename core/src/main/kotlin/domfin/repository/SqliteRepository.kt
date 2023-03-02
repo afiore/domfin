@@ -13,9 +13,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.isNull
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-object SqliteRepository : TransactionRepository, TransactionOffsetRepository, CategoriesRepository,
-    CategorisationRuleRepository,
-    TransactionCategoryRepository {
+object SqliteRepository : TransactionOffsetRepository, CategorisedTransactionsRepository, CategorisationRuleRepository {
     private val T = Transactions
     private val C = Categories
     private val TO = TransactionOffsets
@@ -84,8 +82,28 @@ object SqliteRepository : TransactionRepository, TransactionOffsetRepository, Ca
             }
     }
 
+    override fun categoriseTransactions(
+        accountId: AccountId,
+        transactionIds: Iterable<String>,
+        categoryId: CategoryId
+    ): AffectedRows {
 
-    override fun categoriseTransactions(categorisationRule: CategorisationRule) {
+        TC.deleteWhere {
+            (TC.accountId eq accountId)
+                .and(TC.transactionId inList transactionIds)
+        }
+
+        return TC.insert(
+            T.slice(stringLiteral(accountId), T.transactionId, stringLiteral(categoryId.value))
+                .select {
+                    (T.transactionId inList transactionIds)
+                        .and(T.accountId eq stringLiteral(accountId))
+                },
+            columns = listOf(TC.accountId, TC.transactionId, TC.categoryId)
+        )?.toUInt() ?: 0u
+    }
+
+    override fun applyCategorisationRule(categorisationRule: CategorisationRule) {
         val categoryId = categorisationRule.category.id.value
         TC.insert(
             T.slice(

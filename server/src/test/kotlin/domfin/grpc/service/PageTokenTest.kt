@@ -3,6 +3,7 @@ package domfin.grpc.service
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNull
 import org.junit.jupiter.api.Test
+import service.transactions.PageToken
 
 class PageTokenTest {
     @Test

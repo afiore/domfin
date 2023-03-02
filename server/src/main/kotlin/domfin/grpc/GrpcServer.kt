@@ -1,16 +1,20 @@
 package domfin.grpc
 
 import domfin.config.AppConfig
-import domfin.grpc.service.CategorisationServiceImpl
 import domfin.grpc.service.ExceptionInterceptor
-import domfin.grpc.service.TransactionServiceImpl
+import domfin.grpc.service.GrpcCategorisationServiceImpl
+import domfin.grpc.service.GrpcTransactionServiceImpl
 import domfin.nordigen.client.AccountInformationApiImpl
+import domfin.repository.CategorisedTransactionsRepositoryProvider
+import domfin.repository.DataSourceProvider
 import domfin.repository.SqlMigrator
 import domfin.repository.SqliteRepository
 import io.grpc.ServerBuilder
 import io.grpc.protobuf.services.ProtoReflectionService
 import kotlinx.coroutines.*
 import mu.KotlinLogging
+import service.transactions.ExpensesServiceImpl
+import service.transactions.Sync
 import kotlin.coroutines.CoroutineContext
 
 
@@ -30,7 +34,7 @@ fun main() {
                         nordigenConfig.secretId.raw,
                         nordigenConfig.secretKey.raw
                     )
-                val transactionSync = domfin.transactions.Sync(accountApi, SqliteRepository, dbConfig.dataSource)
+                val transactionSync = Sync(accountApi, SqliteRepository, dbConfig.dataSource)
                 transactionSync.runForAllAccounts()
 
                 logger.info { "Sleeping for ${nordigenConfig.transactionSyncInterval}... " }
@@ -45,22 +49,32 @@ fun main() {
         launch {
             launchSyncTransactions()
         }
+        val dependencyProvider = object : DataSourceProvider, CategorisedTransactionsRepositoryProvider {
+            override val dataSource = dbConfig.dataSource
+            override val repository = SqliteRepository
+        }
 
-        val server =
-            ServerBuilder
-                .forPort(grpcConfig.serverPort.toInt())
-                .addService(ProtoReflectionService.newInstance())
-                .addService(
-                    CategorisationServiceImpl(SqliteRepository, dbConfig.dataSource)
-                )
-                .addService(
-                    TransactionServiceImpl(SqliteRepository, dbConfig.dataSource)
-                )
-                .intercept(ExceptionInterceptor())
-                .build()
+        with(dependencyProvider) {
+            val server =
+                ServerBuilder
+                    .forPort(grpcConfig.serverPort.toInt())
+                    .addService(ProtoReflectionService.newInstance())
+                    .addService(
+                        GrpcCategorisationServiceImpl(SqliteRepository, dbConfig.dataSource)
+                    )
+                    .addService(
+                        GrpcTransactionServiceImpl(ExpensesServiceImpl())
+                    )
+                    .intercept(ExceptionInterceptor())
+                    .build()
 
-        server.start()
-        logger.info { "Starting gRPC server on port ${grpcConfig.serverPort}" }
-        server.awaitTermination()
+            server.start()
+            logger.info { "Starting gRPC server on port ${grpcConfig.serverPort}" }
+            server.awaitTermination()
+
+        }
+
+
     }
 }
+

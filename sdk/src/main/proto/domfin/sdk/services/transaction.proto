@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+import "domfin/sdk/messages.proto";
+
+package domfin.sdk.services;
+
+service TransactionService {
+  rpc GetCategorisedExpenses(GetCategorisedExpensesRequest) returns (CategorisedExpensesResponse) {}
+  rpc SetTransactionsCategory(SetTransactionsCategoryRequest) returns (SetTransactionsCategoryResponse) {}
+}

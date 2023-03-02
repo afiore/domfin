@@ -9,10 +9,10 @@ import domfin.nordigen.client.AccountInformationApiImpl
 import domfin.repository.SQLDataSource
 import domfin.repository.SqlMigrator
 import domfin.repository.SqliteRepository
-import domfin.transactions.Categorisation
-import domfin.transactions.Sync
 import kotlinx.coroutines.runBlocking
 import mu.KotlinLogging
+import service.transactions.AutoCategorisation
+import service.transactions.Sync
 import java.nio.file.Path
 
 class SyncTransactions : CliktCommand() {
@@ -32,7 +32,7 @@ class SyncTransactions : CliktCommand() {
             val api = AccountInformationApiImpl.withFreshToken(secrets.id, secrets.key)
             runMigrator()
             val sync = Sync(api, SqliteRepository, dataSource)
-            val categorisation = Categorisation(SqliteRepository, dataSource)
+            val categorisation = AutoCategorisation(SqliteRepository, dataSource)
             sync.runForAllAccounts()
             categorisation.applyAllRules()
         }

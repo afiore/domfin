@@ -128,6 +128,7 @@ complexity:
     ignoreDefaultParameters: false
     ignoreDataClasses: true
     ignoreAnnotatedParameter: [ ]
+    excludes: [ '**/build/generated/**' ]
   MethodOverloading:
     active: false
     threshold: 6
@@ -375,6 +376,7 @@ naming:
     privateVariablePattern: '(_)?[a-z][A-Za-z0-9]*'
     excludeClassPattern: '$^'
     ignoreOverridden: true
+    excludes: [ '**/build/generated/**' ]
 
 performance:
   active: true
@@ -566,7 +568,7 @@ style:
     maxJumpCount: 1
   MagicNumber:
     active: true
-    excludes: [ '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**', '**/*.kts' ]
+    excludes: [ '**/test/**', '**/androidTest/**', '**/commonTest/**', '**/jvmTest/**', '**/jsTest/**', '**/iosTest/**', '**/*.kts', '**/build/generated/**' ]
     ignoreNumbers:
       - '-1'
       - '0'

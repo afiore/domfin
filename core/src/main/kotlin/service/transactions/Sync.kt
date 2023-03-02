@@ -1,12 +1,11 @@
-package domfin.transactions
+package service.transactions
 
 import domfin.nordigen.client.GetAllRequistions
 import domfin.nordigen.client.GetTransactionsApi
 import domfin.repository.TransactionOffsetRepository
 import domfin.repository.TransactionRepository
+import domfin.repository.transact
 import mu.KotlinLogging
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.transactions.transaction
 import javax.sql.DataSource
 
 
@@ -27,10 +26,9 @@ class Sync<Api, Repo> constructor(
     suspend fun runForAllAccounts() {
         val requisitions = api.getAllRequisitions()
         val accountIds = requisitions.flatMap { it.accounts }.distinct()
-        val db = Database.connect(dataSource)
 
         accountIds.forEach { accountId ->
-            val transactionOffsets = transaction(db) {
+            val transactionOffsets = dataSource.transact {
                 repo.getLastOffset(accountId)
             }
             logger.debug { "Current offsets for account id $accountId: $transactionOffsets" }
@@ -39,7 +37,7 @@ class Sync<Api, Repo> constructor(
 
             logger.info { "Found ${transactions.count} new transaction/s" }
 
-            transaction(db) {
+            dataSource.transact {
                 repo.insertAllTransactions(accountId, transactions)
                 transactions.latestOffset?.also {
                     repo.setLastOffset(accountId, it)

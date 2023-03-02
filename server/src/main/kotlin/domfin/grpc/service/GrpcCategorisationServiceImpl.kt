@@ -1,8 +1,8 @@
 package domfin.grpc.service
 
 import domfin.domain.CategoryId
-import domfin.repository.CategoriesRepository
 import domfin.repository.CategorisationRuleRepository
+import domfin.repository.CategoryRepository
 import domfin.repository.transact
 import domfin.sdk.*
 import domfin.sdk.services.CategorisationServiceWireGrpc.CategorisationServiceImplBase
@@ -11,12 +11,12 @@ import io.grpc.StatusRuntimeException
 import javax.sql.DataSource
 
 //TODO: is there a way to fail compilation when new methods are introduced? should we care?
-class CategorisationServiceImpl<T> constructor(
+class GrpcCategorisationServiceImpl<T> constructor(
     private val repo: T,
     private val dataSource: DataSource
 ) :
     CategorisationServiceImplBase()
-        where T : CategoriesRepository,
+        where T : CategoryRepository,
               T : CategorisationRuleRepository {
 
     override suspend fun GetAllCategorisationRules(request: GetAllCategorisationRulesRequest): GetAllCategorisationRulesResponse {

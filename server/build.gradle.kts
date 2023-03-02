@@ -13,6 +13,10 @@ dependencies {
     implementation(libs.kotlinx.coroutines)
     implementation(libs.bundles.logging)
 
+    implementation(platform(libs.forkhandles.bom))
+    implementation(libs.forkhandles.result4k)
+
+
     implementation(platform(libs.exposed.bom))
     implementation(libs.bundles.db)
 

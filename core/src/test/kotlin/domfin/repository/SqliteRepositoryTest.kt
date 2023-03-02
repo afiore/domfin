@@ -8,7 +8,10 @@ import kotlinx.coroutines.runBlocking
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.Transaction
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import org.sqlite.SQLiteErrorCode
+import org.sqlite.SQLiteException
 import java.time.LocalDate
 import kotlin.test.assertEquals
 
@@ -68,15 +71,17 @@ class SqliteRepositoryTest {
 
     @Test
     fun `categorises transactions according to the defined rules`() {
-        val transactions = listOf(
-            debitTransaction("t1", "PREFIX_2_SHOP"),
-            debitTransaction("t2", "OTHER"),
-            debitTransaction("t3", "OTHER"),
-            creditTransaction("t4"),
-            creditTransaction("t5"),
-            debitTransaction("t6", "PREFIX_1_BAKERY"),
-            debitTransaction("t7", "PREFIX_3_BAR"),
-        )
+        val transactions = with(Fixtures) {
+            listOf(
+                debitTransaction("t1", "PREFIX_2_SHOP"),
+                debitTransaction("t2", "OTHER"),
+                debitTransaction("t3", "OTHER"),
+                creditTransaction("t4"),
+                creditTransaction("t5"),
+                debitTransaction("t6", "PREFIX_1_BAKERY"),
+                debitTransaction("t7", "PREFIX_3_BAR"),
+            )
+        }
 
         val categoryId = CategoryId("SOME_CATEGORY")
 
@@ -89,7 +94,7 @@ class SqliteRepositoryTest {
             with(SqliteRepository) {
                 val rule = getAllCategorisationRules().find { it.category.id == categoryId }!!
                 insertAllTransactions(accountId, transactions, isBooked = true)
-                categoriseTransactions(rule)
+                applyCategorisationRule(rule)
 
                 val transactionIds = mutableListOf<String>()
                 exec(
@@ -107,19 +112,126 @@ class SqliteRepositoryTest {
     }
 
     @Test
+    @Disabled
+    fun `fails categorising transaction when supplied arguments violate relational integrity constraints`() {
+        val unknownAccountId = CategoriseTransactionsTestData(
+            label = "Invalid accountId",
+            accountId = "unknown-account",
+            categoryId = Fixtures.Category2.id,
+            transactionIds = listOf(Fixtures.debitTransaction2, Fixtures.debitTransaction3).map { it.transactionId },
+            expectedRowsAffected = 0u,
+        )
+        val unknownCategoryId = unknownAccountId.copy(
+            label = "Unknown category id",
+            categoryId = CategoryId("unknown"),
+        )
+        val unknownTransactionId = unknownCategoryId.copy(
+            label = "Unknown transaction id",
+            transactionIds = listOf("unknown-transaction")
+        )
+
+        listOf(unknownAccountId, unknownCategoryId, unknownTransactionId).forEach {
+            withDb {
+                with(Fixtures) {
+                    val error = runCatching {
+                        SqliteRepository.categoriseTransactions(
+                            it.accountId,
+                            it.transactionIds,
+                            it.categoryId
+                        )
+                    }.exceptionOrNull() as SQLiteException
+
+                    assertEquals(SQLiteErrorCode.SQLITE_CONSTRAINT, error.resultCode)
+                }
+            }
+        }
+
+    }
+
+    @Test
+    fun `categorises transactions with an explicitly supplied category id`() {
+        val uncategorised = CategoriseTransactionsTestData(
+            label = "No previous categorisation",
+            accountId = accountId,
+            categoryId = Fixtures.Category2.id,
+            transactionIds = listOf(Fixtures.debitTransaction2, Fixtures.debitTransaction3).map { it.transactionId },
+            expectedRowsAffected = 2u,
+        )
+        val preCategorised = uncategorised.copy(
+            label = "Previously categorised",
+            previousCategorisation = mapOf(
+                Fixtures.Category1.id to setOf(Fixtures.debitTransaction2.transactionId)
+            )
+        )
+        val withDuplicates = uncategorised.copy(
+            label = "With duplicates",
+            transactionIds = listOf(
+                Fixtures.debitTransaction2,
+                Fixtures.debitTransaction3,
+                Fixtures.debitTransaction3
+            ).map { it.transactionId },
+        )
+
+
+        listOf(uncategorised, preCategorised, withDuplicates).forEach {
+            val (label, accountId, categoryId, transactionIds, expectedRowsAffected, previousCategorisation) = it
+
+            withDb {
+                with(Fixtures) {
+                    executeUpdates(Queries.insertCategories)
+
+                    val debitTransactions = listOf(
+                        debitTransaction4,
+                        debitTransaction2,
+                        debitTransaction3,
+                        debitTransaction1,
+                    )
+
+                    SqliteRepository.insertAllTransactions(accountId, debitTransactions, isBooked = true)
+
+                    if (previousCategorisation.isNotEmpty()) {
+                        val sql = Queries.insertTransactionCategories(accountId, previousCategorisation)
+                        executeUpdates(sql)
+                    }
+
+                    val affectedRows = SqliteRepository.categoriseTransactions(
+                        accountId,
+                        transactionIds, categoryId
+                    )
+                    assertEquals(expectedRowsAffected, affectedRows, label)
+
+                    val expensesMatchingCategory = SqliteRepository.getCategorisedExpenses(
+                        setOf(accountId),
+                        setOf(categoryId),
+                        CategorisationFilter.Selected
+                    )
+
+                    assertEquals(
+                        transactionIds.toSet(),
+                        expensesMatchingCategory.map { it.transactionId }.toSet(),
+                        label
+                    )
+                }
+            }
+        }
+
+    }
+
+
+    @Test
     fun `fetches categorised expenses`() {
         withDb {
             executeUpdates(Queries.insertCategories)
 
             with(SqliteRepository) {
                 val debitTransactions = listOf(
-                    debitTransaction("t4", "PASTA LAND", LocalDate.now().minusDays(5)),
-                    debitTransaction("t2", "PASTA LAND", LocalDate.now().minusDays(4)),
-                    debitTransaction("t3", "METRO TICKET", LocalDate.now().minusDays(4)),
-                    debitTransaction("t1", "NOODLES TEMPLE"),
+                    Fixtures.debitTransaction4,
+                    Fixtures.debitTransaction2,
+                    Fixtures.debitTransaction3,
+                    Fixtures.debitTransaction1,
                 )
                 val otherDebitTransactions = listOf(
-                    debitTransaction("t5", "BOOKS & COFFEE"),
+                    Fixtures.debitTransaction5
                 )
 
                 insertAllTransactions(accountId, debitTransactions, isBooked = true)
@@ -243,7 +355,6 @@ class SqliteRepositoryTest {
         }
     }
 
-
     private fun <T> withDb(stmt: Transaction.() -> T) {
         runBlocking {
             SQLDataSource.fromTmpFile { dataSource ->
@@ -259,12 +370,62 @@ class SqliteRepositoryTest {
         }
     }
 
+
+    private data class CategoriseTransactionsTestData(
+        val label: String,
+        val accountId: AccountId,
+        val categoryId: CategoryId,
+        val transactionIds: Iterable<String>,
+        val expectedRowsAffected: AffectedRows,
+        val previousCategorisation: Map<CategoryId, Set<String>> = mapOf()
+    )
+
+
     object Fixtures {
+
         val Category1 = Category(CategoryId("SOME_CATEGORY"), "Some category")
         val Category2 = Category(CategoryId("SOME_OTHER_CATEGORY"), "Some other category")
+
+
+        val debitTransaction5 = debitTransaction("t5", "BOOKS & COFFEE")
+        val debitTransaction4 = debitTransaction("t4", "PASTA LAND", LocalDate.now().minusDays(5))
+        val debitTransaction2 = debitTransaction("t2", "PASTA LAND", LocalDate.now().minusDays(4))
+        val debitTransaction3 = debitTransaction("t3", "METRO TICKET", LocalDate.now().minusDays(4))
+        val debitTransaction1 = debitTransaction("t1", "NOODLES TEMPLE")
+
+        internal fun creditTransaction(id: String): domfin.nordigen.Transaction =
+            Credit(id, "some-debitor", null, TransactionAmount("USD", 2000.0), "", LocalDate.now(), LocalDate.now())
+
+        internal fun debitTransaction(
+            id: String,
+            creditorName: String,
+            date: LocalDate = LocalDate.now()
+        ): domfin.nordigen.Transaction =
+            Debit(id, creditorName, TransactionAmount("EUR", 15.0), "", date, date)
+
     }
 
     object Queries {
+        fun insertTransactionCategories(
+            accountId: AccountId,
+            transactionCategorisation: Map<CategoryId, Set<String>>
+        ): String {
+            val b = StringBuilder()
+            b.append("INSERT INTO transaction_categories (account_id, transaction_id, category_id) VALUES ")
+            for ((categoryId, transactionIds) in transactionCategorisation) {
+                for (tId in transactionIds) {
+                    b.append(
+                        listOf(accountId, tId, categoryId.value).joinToString(
+                            prefix = "(",
+                            transform = { "'${it}'" },
+                            postfix = ")"
+                        )
+                    )
+                }
+            }
+            return b.toString()
+        }
+
         val insertCategories =
             """INSERT INTO categories (id, label) VALUES
                          ('${Fixtures.Category1.id.value}', '${Fixtures.Category1.label}'),
@@ -277,13 +438,4 @@ class SqliteRepositoryTest {
     }
 
 
-    private fun creditTransaction(id: String): domfin.nordigen.Transaction =
-        Credit(id, "some-debitor", null, TransactionAmount("USD", 2000.0), "", LocalDate.now(), LocalDate.now())
-
-    private fun debitTransaction(
-        id: String,
-        creditorName: String,
-        date: LocalDate = LocalDate.now()
-    ): domfin.nordigen.Transaction =
-        Debit(id, creditorName, TransactionAmount("EUR", 15.0), "", date, date)
 }

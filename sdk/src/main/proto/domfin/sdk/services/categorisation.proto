@@ -8,7 +8,3 @@ service CategorisationService {
   rpc GetAllCategorisationRules(GetAllCategorisationRulesRequest) returns (GetAllCategorisationRulesResponse) {}
   rpc SetCategorisationRule(SetCategorisationRuleRequest) returns (SetCategorisationRuleResponse) {}
 }
-
-service TransactionService {
-  rpc GetCategorisedExpenses(GetCategorisedExpensesRequest) returns (CategorisedExpensesResponse) {}
-}

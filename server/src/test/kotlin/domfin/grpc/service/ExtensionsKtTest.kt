@@ -3,6 +3,7 @@ package domfin.grpc.service
 import domfin.repository.LimitAndOffset
 import domfin.sdk.Pagination
 import org.junit.jupiter.api.Test
+import service.transactions.PageToken
 import kotlin.test.assertEquals
 
 class ExtensionsKtTest {

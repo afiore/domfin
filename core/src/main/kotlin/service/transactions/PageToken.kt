@@ -1,4 +1,4 @@
-package domfin.grpc.service
+package service.transactions
 
 import java.nio.ByteBuffer
 import java.util.*

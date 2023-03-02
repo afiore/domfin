@@ -1,6 +1,7 @@
 [versions]
 junit = "4.13"
 kotlin = "1.8.0"
+forkhandles = "2.3.0.0"
 http4k = "4.37.0.0"
 exposed = "0.40.1"
 wire = "4.5.1"
@@ -12,6 +13,9 @@ junit = { module = "junit:junit", version.ref = "junit" }
 
 kotlinx-coroutines = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version = "1.6.4" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version = "1.5.0-RC" }
+
+forkhandles-bom = { module = "dev.forkhandles:forkhandles-bom", version.ref = "forkhandles" }
+forkhandles-result4k = { module = "dev.forkhandles:result4k", version.ref = "forkhandles" }
 
 kotlin-logging = { module = "io.github.microutils:kotlin-logging-jvm", version = "3.0.4" }
 slf4j-reload4j = { module = "org.slf4j:slf4j-reload4j", version = "2.0.6" }
@@ -51,6 +55,7 @@ pluginz-detekt = { module = "io.gitlab.arturbosch.detekt:detekt-gradle-plugin", 
 
 [bundles]
 logging = ["kotlin-logging", "slf4j-reload4j"]
+forkhandles = ["forkhandles-result4k"]
 http4k = ["http4k-core", "http4k-client-apache", "http4k-format-kotlinx-serialization"]
 db = ["flyway-core", "sqlite-jdbc", "exposed-core", "exposed-dao", "exposed-jdbc"]
 grpc-server = ["grpc-core", "grpc-services", "grpc-netty"]

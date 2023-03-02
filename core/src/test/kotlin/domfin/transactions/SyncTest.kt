@@ -9,6 +9,7 @@ import domfin.nordigen.client.GetTransactionsApi
 import domfin.repository.*
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Test
+import service.transactions.Sync
 import java.time.LocalDate
 import kotlin.test.assertEquals
 

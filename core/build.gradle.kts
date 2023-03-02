@@ -10,6 +10,9 @@ dependencies {
 
     implementation(libs.bundles.logging)
 
+    implementation(platform(libs.forkhandles.bom))
+    implementation(libs.forkhandles.result4k)
+
     implementation(platform(libs.http4k.bom))
     implementation(libs.bundles.http4k)
 

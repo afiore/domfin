@@ -6,11 +6,19 @@ import domfin.domain.Expense
 import domfin.repository.CategorisationFilter
 import domfin.repository.LimitAndOffset
 import domfin.sdk.Pagination
+import domfin.sdk.SetTransactionsCategoryRequest
+import service.transactions.PageToken
 import domfin.sdk.Amount as AmountProto
 import domfin.sdk.CategorisationFilter as CategorisationFilterProto
 import domfin.sdk.Category as CategoryProto
 import domfin.sdk.Expense as ExpenseProto
 
+
+fun SetTransactionsCategoryRequest.validOrNull(): SetTransactionsCategoryRequest? =
+    if (category_id.isBlank() || account_id.isBlank() || transaction_ids.isEmpty())
+        null
+    else
+        this
 
 fun CategorisationFilterProto.fromProto(): CategorisationFilter =
     when (this) {
