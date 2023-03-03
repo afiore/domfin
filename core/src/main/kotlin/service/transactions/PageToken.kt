@@ -9,8 +9,10 @@ value class PageToken(val value: String) {
         val bytes = Base64.getDecoder().decode(value)
         ByteBuffer.wrap(bytes).long
     }.getOrNull()?.let {
-        if (it > 0) it.toULong()
-        else null
+        if (it > 0)
+            it.toULong()
+        else
+            null
     }
 
     companion object {

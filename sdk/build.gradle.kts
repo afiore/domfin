@@ -20,6 +20,13 @@ wire {
         rpcRole = "client"
         rpcCallStyle = "suspending"
     }
+
+    protoPath {
+        srcJar(libs.grpc.google.protobuf.java)
+    }
+    protoPath {
+        srcJar(libs.grpc.google.common.protos)
+    }
 }
 
 dependencies {

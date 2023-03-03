@@ -1,0 +1,16 @@
+version: v1
+plugins:
+  - plugin: go
+    out: ../../../../rest-gateway
+    opt: 
+     - paths=source_relative
+  - plugin: go-grpc
+    out: ../../../../rest-gateway
+    opt: 
+     - paths=source_relative
+  - plugin: grpc-gateway
+    out: ../../../../rest-gateway
+    opt:
+      - paths=source_relative
+      - generate_unbound_methods=true
+

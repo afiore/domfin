@@ -23,6 +23,9 @@ dependencies {
     testImplementation(kotlin("test"))
 }
 
+detekt {
+    disableDefaultRuleSets = true
+}
 
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

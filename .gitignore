@@ -3,6 +3,11 @@
 **/build/
 !src/**/build/
 
+# ignore generated source for grpc-gateway
+rest-gateway/messages.pb.go
+rest-gateway/srv
+
+
 # Ignore Gradle GUI config
 gradle-app.setting
 

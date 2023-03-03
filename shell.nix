@@ -5,8 +5,12 @@ pkgs.mkShell {
     pkgs.gradle_7
     pkgs.protobuf
     pkgs.grpc-gateway
+    pkgs.protoc-gen-go
+    pkgs.protoc-gen-go-grpc
+    pkgs.go
     pkgs.buf
     pkgs.postman
+    pkgs.envoy
   ];
   "DB_PATH" = "/home/a.fiore/.domfin.sqlite";
   "GRPC_SERVER_PORT" = "9999";
